@@ -7,7 +7,6 @@ import (
 
 	"github.com/anz-bank/sysl/pkg/parse"
 	"github.com/anz-bank/sysl/pkg/sysl"
-	"github.com/joshcarp/gop/gop/retriever/retriever_github"
 	"github.com/sandertv/mcwss"
 	"github.com/sandertv/mcwss/mctype"
 	"github.com/sandertv/mcwss/protocol/event"
