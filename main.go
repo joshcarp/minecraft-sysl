@@ -30,16 +30,7 @@ func main() {
 	})
 
 	p := parse.NewParser()
-
-	server.OnConnection(func(player *mcwss.Player) {
-		MOTD(player)
-		InitArea(player)
-		fmt.Println(player)
-		player.OnPlayerMessage(func(event *event.PlayerMessage) {
-			fmt.Println(event.Message)
-			// Initialize admin area
-			if strings.Contains("get", event.Message) {
-				module, _ := p.ParseString(`App:
+	module, _ := p.ParseString(`App:
     _:
         foobar:
             return ok <: string
@@ -51,13 +42,11 @@ App3:
     _:
         oasdoiasd:
             reutrn ok <: string`)
-				if module == nil {
-					return
-				}
-				DoSysl(player, module)
-
-			}
-		})
+	server.OnConnection(func(player *mcwss.Player) {
+		MOTD(player)
+		InitArea(player)
+		fmt.Println(player)
+		DoSysl(player, module)
 	})
 	server.OnDisconnection(func(player *mcwss.Player) {
 		fmt.Println(player)
