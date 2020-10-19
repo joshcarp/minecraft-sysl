@@ -1,0 +1,26 @@
+# Generates the PlantUML for an integration diagram of model.sysl.
+
+let sysl = //{./sysl};
+let model = sysl.normalize(sysl.polish(sysl.load('out/model.pb')));
+
+# Transforms a module to an adjacency list of applications.
+#
+# The adjacency list is represented as an array of tuples with `from` (the name
+# of the upstream app) and `to` (a set of downstream apps that `from` calls).
+let toAdj = \m
+    m.calls => ((:.from, :.to) :> .appName) where .from != .to nest |to|to => :> => \v v.to?:v
+;
+
+# Transforms an adjacency list of applications to a PlantUML integration diagram.
+let toInt = \adj $`
+    @startuml
+    skinparam component {
+      BackgroundColor FloralWhite
+      BorderColor Black
+      ArrowColor Crimson
+    }
+    ${(adj => \(:from, :to) $`${to => $`[${from}] --> [${.}]` orderby .::\n}`) orderby .::\n}
+    @enduml
+`;
+
+toInt(toAdj(model))

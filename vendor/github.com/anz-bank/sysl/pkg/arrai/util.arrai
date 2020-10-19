@@ -1,0 +1,188 @@
+# A collection of helper functions for arr.ai.
+#
+# If generally useful, these should gradually migrate to a more standard library.
+
+# Invokes a macro on a string as if it were source code at parsing time.
+let invokeMacro = \macro \s
+    macro -> (//dict(.@transform) >>> \rule \fn
+        fn(//grammar.parse(.@grammar, rule, s))).@value
+;
+
+# Transforms an AST into a simple tuple of its values.
+# Useful for the @transform of a flat grammar.
+let rec simpleTransform = \ast
+    cond ast {
+        (...):
+            let d = //dict(ast) >> \term cond term {
+                ('':value): value,
+                (...): simpleTransform(term),
+                [...]: term >> simpleTransform(.) where .@item,
+                _: {},
+            };
+            //tuple(d where .@value),
+        _: {}
+    }
+;
+
+# Filters the nodes of a hierarchical data structure based on a (key, value) predicate.
+# Key-value pairs for which the predicate returns false will be removed from the result.
+let rec filterTree = \pred \ast
+    cond ast {
+        {(@:..., @value:...), ...}: ast where pred(.@, .@value) >> filterTree(pred, .),
+        [...]: ast >> filterTree(pred, .),
+        {...}: ast => filterTree(pred, .),
+        (...): safetuple(//dict(ast) where pred(.@, .@value) >> filterTree(pred, .)),
+        _: ast,
+    }
+;
+
+# Sequentially applies `fn(accumulator, i)` for each `i` in `arr`. The `accumulator` is initialised
+# to `val`, and updated to the result of `fn` after each invocation.
+# Returns the final accumulated value.
+let rec reduce = \arr \fn \val
+    cond arr {
+        [head, ...]:
+            let tail = -1\(arr without (@:0, @item:head));
+            reduce(tail, fn, fn(val, head)),
+        _: val,
+    }
+;
+
+# Sequentially applies `fn(accumulator, k, v)` for each `{k: v}` pair in `obj`.
+# The `accumulator` is initialised to `val`, and updated to the result of `fn`
+# after each invocation.
+# Returns the final accumulated value.
+let rec reduceObj = \obj \fn \val
+    cond obj {
+        {}: val,
+        [(@:k, @value:v), ...tail]: reduceObj(tail rank (:.@), fn, fn(val, k, v)),
+        [(@:k, @item:v), ...tail]:  reduceObj(tail rank (:.@), fn, fn(val, k, v)),
+        (...): reduceObj(//dict(obj) orderby .@, fn, val),
+        _:     reduceObj(obj orderby .@, fn, val),
+    }
+;
+
+# Performs `reduce` once on `arr`, and once for each array output of `fn`. Accumulates to the same
+# value across all invocations.
+let reduceFlat = \arr \fn \val
+    reduce(arr, \z \i reduce(i, fn, z), val)
+;
+
+# Returns a sequence with any offset and holes removed.
+let ranked = \s s rank (:.@);
+# Explore constructs a dependency graph by starting at source and calling step
+# to find adjacent nodes. Deps is the graph constructed so far.
+# Self-edges are ignored.
+let rec _explore = \source \step \deps
+    cond {
+        {source} & (deps => .@): deps,
+        _:
+            let next = step(source) where . != source;
+            let deps = deps | {(@:source, @value: next)};
+            reduce(next orderby ., \v \i _explore(i, step, v), deps)
+    };
+let explore = \source \step _explore(source, step, {});
+
+# Unimported returns the set of nodes with no in-edges.
+let unimported = \g (g => .@) where !({.} & //rel.union(g => .@value));
+
+# Topsort returns an array of nodes in graph in dependency order.
+let rec _topsort = \graph \sorted \sources
+    cond sources orderby . {
+        []: sorted,
+        [..., tail]:
+            let adjs = graph(tail);
+            let graph = graph where .@ != tail;
+            let sources = (sources &~ {tail}) | (adjs & unimported(graph));
+            _topsort(graph, sorted ++ [tail], sources)
+    };
+let topsort = \graph _topsort(graph, [], unimported(graph));
+
+# TODO: this should be part of stdlib
+let rec trimWhitespace = \str
+    let prefix = //seq.trim_prefix(' ');
+    let suffix = //seq.trim_suffix(' ');
+    let trimmed = prefix(suffix(str));
+    cond trimmed {
+        (str): str,
+        _: trimWhitespace(trimmed)
+    }
+;
+
+
+# TODO: Handle type without app reference
+let typeGrammar = {:
+        //grammar.lang.wbnf[grammar]:
+        types -> (app=([^\.]+) ".")? type=([^\.]+):".";
+    :};
+let unpackType = \type (
+    cond type {
+        (''): (app: '', type: '', field: ''),
+        _: (//grammar -> .parse(typeGrammar, 'types', type))
+            ->
+            # TODO: remove once .field?: is fixed
+            let t = .;
+            let app = trimWhitespace(ranked(t.app?.''?:''));
+            let typeCount = .type count;
+            cond (typeCount) {
+                (1): (
+                    :app,
+                    type : .type >> trimWhitespace(ranked(.'')),
+                    field: ''
+                ),
+                _: (
+                    :app,
+                    type : .type where .@ != typeCount - 1 >> trimWhitespace(ranked(.'')),
+                    field: trimWhitespace(ranked(.type(typeCount-1).''))
+                )
+            }
+    }
+);
+
+let packType = \(app: appName, type: typeSeq, field: fieldName) (
+    cond fieldName {
+        (''): //seq.join('.', [appName] ++ typeSeq),
+        _: //seq.join('.', [appName] ++ typeSeq ++ [fieldName]),
+    }
+)
+;
+
+# isValidIdentifier checks whether the identifier name is valid.
+let isValidIdentifier = \identifier
+    # InvalidIdentifiers that would be appended by underscore('_') when used as an identifier in the ingested SQL
+    # for instance  a column "Int64 INT64" becomes _Int64 <: int [name="Int64"].
+    # List is still fairly limited but more keywords could be added as we go.
+    let invalidIdentifiers = { "as", "if", "else", 
+        "any", "int", "int32", "int64", "float", "float32", "float64", "decimal", "string", "bool", "date", "datetime", "bytes"
+    };
+
+    # sysl is largely case insensitive so lowercase the identifier before comparison
+    # taken from pkg/grammar/SyslLexer.g4
+    let regex = //re.compile("('%'[0-9a-fA-F][0-9a-fA-F])*[a-zA-Z_]([-a-zA-Z0-9_]|('%'[0-9a-fA-F][0-9a-fA-F]))*");
+    !(//str.lower(identifier) <: invalidIdentifiers) && regex.match(identifier);
+
+# resolveValidIdentifier resolves the invalid identifier name.
+let resolveValidIdentifier = \identifier
+    cond {
+        !isValidIdentifier(identifier): '_' ++ identifier,
+        _: identifier
+    };
+(
+    :explore,
+    :filterTree,
+    :invokeMacro,
+    :simpleTransform,
+    :ranked,
+    :reduce,
+    :reduceFlat,
+    :reduceObj,
+    :ranked,
+    :simpleTransform,
+    :topsort,
+    :unimported,
+    :unpackType,
+    :packType,
+    :trimWhitespace,
+    :isValidIdentifier,
+    :resolveValidIdentifier,
+)

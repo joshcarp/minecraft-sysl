@@ -1,0 +1,5 @@
+test/
+
+# The binary model is non-deterministic.
+out/model.pb
+out/tmp*

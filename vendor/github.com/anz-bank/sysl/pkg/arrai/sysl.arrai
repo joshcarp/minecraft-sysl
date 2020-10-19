@@ -1,0 +1,197 @@
+# Performs transformations of Sysl models, producing "better" Sysl models.
+
+# Loads and returns a Sysl model.
+let syslPbPath = '../sysl/sysl.pb';
+let syslPb = cond //os.exists(syslPbPath) {
+    true: //os.file(syslPbPath),
+    false: //net.http.get('https://github.com/anz-bank/sysl/blob/master/pkg/sysl/sysl.pb?raw=true').body,
+};
+let load = \path
+    let syslDescriptor = //encoding.proto.descriptor(syslPb);
+    //encoding.proto.decode(syslDescriptor, 'Module' , //os.file(path));
+
+# Extracts the set of pattern attributes of an element.
+let patterns = \x x.attrs?('patterns')?.a.elt:{} => .@item.s;
+
+# A macro to convert `ret` statement payload string to structured tuples.
+let payloadMacro = (
+    @grammar: {://grammar.lang.wbnf:
+        payload -> (status ("<:" type)? | (status "<:")? type) attr?;
+        type -> [^\[\n]*;
+        status -> ("ok"|"error"|[1-5][0-9][0-9]);
+        attr -> %!Array(nvp|modifier);
+        nvp_item -> str | array=%!Array(nvp_item) | dict=%!Dict(nvp_item);
+        nvp ->  name=\w+ "=" nvp_item;
+        modifier -> "~" name=[\w\+]+;
+        str -> ('"' ([^"\\] | [\\][\\brntu'"])* '"' | "'" ([^''])* "'") {
+             .wrapRE -> /{()};
+        };
+        .wrapRE -> /{\s*()\s*};
+        .macro Array(child) {
+            "[" (child):"," "]"
+        }
+        .macro Dict(child) {
+            "{" entry=(key=child ":" value=child):"," "}"
+        }
+    :},
+    @transform: (payload: //{./util}.simpleTransform),
+);
+
+# TODO: this is assuming that attribute values are similar to arrai strings
+let rec buildNvp = \nvp cond nvp {
+    (array: (nvp_item: i, ...), ...): (a: i => (:.@, @item: buildNvp(.@item))),
+    (dict: (entry: i, ...), ...): (d: i => (
+        @     : buildNvp(.@item.key.nvp_item),
+        @value: buildNvp(.@item.value.nvp_item)
+    )),
+    (str: ('': s, ...), ...): //eval.value(//seq.join('', s)),
+    _: //eval.value(//seq.join('', //log.print(nvp.'')))
+};
+
+let name = //{./util}.ranked;
+
+# tries to fix type without full reference
+let fixType = \apps \appName \typePayload
+    # add trim whitespace function
+    let typePayload = //{./util}.trimWhitespace(typePayload);
+    let (:app, :type, :field) = //{./util}.unpackType(typePayload);
+    let pack = //{./util}.packType;
+    cond app {
+        (''): pack((app: appName, :type, :field)),
+        _: cond {
+            (app <: apps): typePayload,
+            _: pack((app: appName, type: [app] ++ type, :field))
+        }
+    }
+;
+
+# Converts a return statement payload into a tuple of its parts.
+let parseReturn = \payload \apps \currApp
+    let ret = //{./util}.invokeMacro(payloadMacro, payload);
+    let retType = ret.type?:'';
+    ret +> (
+        type: fixType(apps, currApp, retType),
+        attr: //grammar -> .parse(payloadMacro.@grammar, 'payload', payload).attr?:() -> \attr
+                (
+                    nvp: attr.nvp?:{} => (@: name(.@item.name.''), @value: buildNvp(.@item.nvp_item)),
+                    modifier: attr.modifier?:{} => name(.@item.name.'')
+                )
+    )
+;
+
+# Replaces all `ret` payloads with structured tuples.
+let polishReturns = \m
+    let apps = m.apps => .@;
+    let tweak = \. \currApp
+        . +> (ret: .ret +> (payload: parseReturn(.ret.payload, apps, currApp)));
+
+    m +> (apps: m.apps?:{} >>> \currApp \a
+        a +> (endpoints: a.endpoints?:{} >> \p
+            p +> (stmt: p.stmt?:[] >> \s
+                cond s.ret?:{} {{}: s, _: tweak(s, currApp)}
+            )
+        )
+    )
+;
+
+# Applies polish functions to the appropriate elements of a Sysl model.
+let polish = \m
+    polishReturns(m)
+    # TODO: More polish.
+;
+
+# Returns a normalised, relational model of a Sysl model.
+let normalize = \m
+    let apps = m.apps => \(@:appName, @value:app)
+        (
+            :appName,
+            appPackage: app.attrs?('package')?.s:{},
+            appDescription: app.attrs?('description')?.s:{},
+            appPatterns: patterns(app),
+            appAnnotations: app.attrs?:{} >>> \k \v v.s?:(v.a.elt >> .s),
+        )
+    ;
+    let endpoints = //rel.union(m.apps => \(@:appName, @value:app)
+        app.endpoints?:{} => \(@:epName, ...)
+            (
+                :appName,
+                :epName,
+            )
+    );
+    let calls = //rel.union(m.apps => \(@:appName, @value:app)
+        //rel.union(app.endpoints?:{} => \(@:epName, @value:ep)
+            ep.stmt?:{} where .@item.call?:{} =>
+                (
+                    from: (
+                        :appName,
+                        :epName,
+                    ),
+                    to: (
+                        appName: .@item.call.target.part.@item,
+                        epName: .@item.call.endpoint,
+                    ),
+                    # TODO: Use stmt.source_context once populated by parser.
+                    # https://github.com/anz-bank/sysl/issues/990
+                    sourceContext: ep.source_context +> (:.@),
+                )
+        )
+    );
+    let types = //rel.union(m.apps => \(@:appName, @value:app)
+        app.types?:{} => \(@:typeName, @value: t)
+            (
+                :appName,
+                :typeName,
+                typeAnnotations: t.attrs?:{} >>> \k \v v.s?:(v.a.elt),
+                typeSourceContext: t.source_context,
+            )
+        ) where .
+    ;
+    let fields = //rel.union(m.apps => \(@:appName, @value:app)
+        //rel.union(app.types?:{} => \(@:typeName, @value:type)
+            type.relation?.attr_defs?:{} => \(@:fieldName, @value:field)
+                let patterns = patterns(field);
+                (
+                    :appName,
+                    :typeName,
+                    :fieldName,
+                    fieldType: cond field {
+                        (primitive:p, ...): p,
+                        (type_ref:(ref:(path:p), ...), ...): //seq.join('.', p),
+                        (sequence: (primitive: p, ...), ...): [p],
+                        (set: (primitive: p, ...), ...): {p},
+                        _: '?',
+                    },
+                    fieldConstraint: field.constraint?:{},
+                    fk: cond field.type_ref?.ref.path:{} {
+                        [t, f]: (:appName, typeName: t, fieldName: f)
+                    },
+                    fieldAnnotations: field.attrs?:{} >>> \k \v v.s?:(v.a.elt >> .s),
+                    :patterns,
+                    pk: 'pk' <: patterns,
+                    opt: field.opt?:{},
+                    fieldSourceContext: field.source_context,
+                )
+        ) where .
+    );
+    # let transforms = //{./dfa/transforms}(m.apps);
+    (
+        :apps,
+        :endpoints,
+        :calls,
+        :types,
+        :fields,
+        # :transforms,
+        # TODO:
+        # :annotations, (aka attributes)
+        # :tags, (aka patterns)
+    )
+;
+
+# Export the functions from the module.
+(
+    :load,
+    :normalize,
+    :parseReturn,
+    :patterns,
+    :polish,
+)
