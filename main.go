@@ -1,43 +1,22 @@
-// websockets.go
 package main
 
 import (
-	"fmt"
-	"net/http"
-	"os"
-
-	"github.com/gorilla/websocket"
+	"github.com/sandertv/mcwss"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-}
-
 func main() {
-	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		conn, _ := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
-		fmt.Println("Hellooo")
-		for {
-			// Read message from browser
-			msgType, msg, err := conn.ReadMessage()
-			if err != nil {
-				return
-			}
-
-			// Print the message to the console
-			fmt.Printf("%s sent: %s\n", conn.RemoteAddr(), string(msg))
-
-			// Write message back to browser
-			if err = conn.WriteMessage(msgType, msg); err != nil {
-				return
-			}
-		}
+	// Create a new server using the default configuration. To use specific configuration, pass a *wss.Config{} in here.
+	server := mcwss.NewServer(&mcwss.Config{
+		HandlerPattern: "/ws",
+		Address:        ":80",
 	})
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("hello"))
+	server.OnConnection(func(player *mcwss.Player){
+		// Called when a player connects to the server.
 	})
-
-	http.ListenAndServe(":"+os.Getenv("PORT"), nil)
+	server.OnDisconnection(func(player *mcwss.Player){
+		// Called when a player disconnects from the server.
+	})
+	// Run the server. (blocking)
+	server.Run()
 }
