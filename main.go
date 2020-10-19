@@ -1,3 +1,4 @@
+// websockets.go
 package main
 
 import (
@@ -33,5 +34,10 @@ func main() {
 			}
 		}
 	})
-	http.ListenAndServe(":"+ os.Getenv("PORT"), nil)
+
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("hello"))
+	})
+
+	http.ListenAndServe(":"+os.Getenv("PORT"), nil)
 }
