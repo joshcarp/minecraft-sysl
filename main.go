@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/anz-bank/sysl/pkg/parse"
 	"github.com/anz-bank/sysl/pkg/sysl"
@@ -74,8 +76,8 @@ func MOTD(player *mcwss.Player) {
 func DoSysl(p *mcwss.Player, m *sysl.Module) {
 	p.Position(func(pos mctype.Position) {
 		i := 0
-		for _, _ = range m.Apps {
-			p.Exec(fmt.Sprintf("setblock ~1 ~ ~%d birch_planks", i), nil)
+		for _, app := range m.Apps {
+			Summonpos(p, namespacesp[i], "chicken", fmt.Sprintf("%s:service:%s", app.Name.String(), app.Name.String()))
 		}
 	})
 }
@@ -109,4 +111,25 @@ func InitArea(p *mcwss.Player) {
 // Fill will fill the playing area with blocktype, coordinates are absolute
 func Fill(p *mcwss.Player, pos mctype.Position, x1 int, y1 int, z1 int, x2 int, y2 int, z2 int, blocktype string) {
 	p.Exec(fmt.Sprintf("fill %d %d %d %d %d %d %s", int(pos.X)+x1, int(pos.Y)+y1, int(pos.Z)+z1, int(pos.X)+x2, int(pos.Y)+y2, int(pos.Z)+z2, blocktype), nil)
+}
+
+// Summonpos will spawn a named entity in a random area close to the position passed - UniqueID check will prevent spawning an entity more than once
+func Summonpos(p *mcwss.Player, pos mctype.Position, entity string, name string) {
+	if !Contains(uniqueIDs, name) {
+		uniqueIDs = append(uniqueIDs, name)
+		p.Exec(fmt.Sprintf("summon %s %s %d %d %d", entity, name, int(pos.X-1.5+3*rand.Float64()), int(pos.Y)-5, int(pos.Z-1.5+3*rand.Float64())), nil)
+		time.Sleep(100 * time.Millisecond)
+	} else {
+		fmt.Printf("Entity %s already exists\n", name)
+	}
+}
+
+// Contains checks for the occurence of a string in an array of strings
+func Contains(a []string, x string) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
+	}
+	return false
 }
