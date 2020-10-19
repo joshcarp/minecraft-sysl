@@ -1,6 +1,6 @@
 module github.com/joshcarp/minecraft-sysl
 
-go 1.14
+go 1.12
 
 require (
 	github.com/gorilla/websocket v1.4.0
