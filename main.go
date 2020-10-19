@@ -28,7 +28,6 @@ func main() {
 		Address:        "0.0.0.0:" + os.Getenv("PORT"),
 	})
 
-	retr := retriever_github.New(nil)
 	p := parse.NewParser()
 
 	server.OnConnection(func(player *mcwss.Player) {
