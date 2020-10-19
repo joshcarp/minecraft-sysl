@@ -2,26 +2,20 @@ package main
 
 import (
 	"fmt"
-	"log"
-	"net/http"
-	"os"
+	"github.com/sandertv/mcwss"
 )
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Working Golang App")
-}
-
 func main() {
-	http.HandleFunc("/", indexHandler)
-	http.Handle("/favicon.ico", http.NotFoundHandler())
+	// Create a new server using the default configuration. To use specific configuration, pass a *wss.Config{} in here.
+	server := mcwss.NewServer(nil)
 
-	// Get the Port
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-		log.Printf("Defaulting to Port %s", port)
-	}
-
-	log.Printf("Listening on Port %s : Server", port)
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", port), nil))
+	server.OnConnection(func(player *mcwss.Player){
+		fmt.Println(player)
+	})
+	server.OnDisconnection(func(player *mcwss.Player){
+		fmt.Println(player)
+		// Called when a player disconnects from the server.
+	})
+	// Run the server. (blocking)
+	server.Run()
 }
