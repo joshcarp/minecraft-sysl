@@ -14,6 +14,7 @@ func main() {
 	})
 
 	server.OnConnection(func(player *mcwss.Player){
+		MOTD(player)
 		fmt.Println(player)
 	})
 	server.OnDisconnection(func(player *mcwss.Player){
@@ -22,4 +23,10 @@ func main() {
 	})
 	// Run the server. (blocking)
 	server.Run()
+}
+
+// MOTD will display the title and subtitle
+func MOTD(player *mcwss.Player) {
+	player.Exec(fmt.Sprintf("title %s title KubeCraftAdmin", player.Name()), nil)
+	player.Exec(fmt.Sprintf("title %s subtitle The Adventurer's Admin Tool", player.Name()), nil)
 }
