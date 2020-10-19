@@ -1,4 +1,4 @@
-FROM golang:1.12
+FROM golang:1.14
 COPY . /src
 WORKDIR /src
 RUN go build -mod=vendor -o minecraft-sysl .
