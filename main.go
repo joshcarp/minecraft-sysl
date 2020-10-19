@@ -39,7 +39,18 @@ func main() {
 			fmt.Println(event.Message)
 			// Initialize admin area
 			if strings.Contains("get", event.Message) {
-				module, _ := p.Parse(strings.ReplaceAll(event.Message, "get: ", ""), retr)
+				module, _ := p.ParseString(`App:
+    _:
+        foobar:
+            return ok <: string
+App2:
+    _:
+        oasdoiasd:
+            reutrn ok <: string
+App3:
+    _:
+        oasdoiasd:
+            reutrn ok <: string`)
 				if module == nil {
 					return
 				}
