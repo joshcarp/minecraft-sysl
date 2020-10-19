@@ -1,25 +1,16 @@
+# github.com/google/uuid v1.1.1
+github.com/google/uuid
 # github.com/gorilla/websocket v1.4.0
-## explicit
 github.com/gorilla/websocket
-# github.com/imdario/mergo v0.3.11
-## explicit
-# github.com/k0kubun/colorstring v0.0.0-20150214042306-9440f1994b88
-## explicit
-# github.com/mattn/go-colorable v0.1.8
-## explicit
 # github.com/sandertv/mcwss v1.2.0
-## explicit
-# github.com/yudai/pp v2.0.1+incompatible
-## explicit
-# golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e
-## explicit
-# k8s.io/api v0.19.2
-## explicit
-# k8s.io/apimachinery v0.19.2
-## explicit
-# k8s.io/client-go v11.0.0+incompatible
-## explicit
-# k8s.io/klog v1.0.0
-## explicit
-# k8s.io/utils v0.0.0-20201015054608-420da100c033
-## explicit
+github.com/sandertv/mcwss
+github.com/sandertv/mcwss/mctype
+github.com/sandertv/mcwss/protocol
+github.com/sandertv/mcwss/protocol/command
+github.com/sandertv/mcwss/protocol/event
+# github.com/sergi/go-diff v1.0.0
+github.com/sergi/go-diff/diffmatchpatch
+# github.com/yudai/gojsondiff v1.0.0
+github.com/yudai/gojsondiff
+# github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82
+github.com/yudai/golcs
