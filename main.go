@@ -63,7 +63,6 @@ func MOTD(player *mcwss.Player) {
 
 func DoSysl(p *mcwss.Player, m *sysl.Module) {
 	p.Position(func(pos mctype.Position) {
-		i := 0
 		for _, app := range m.Apps {
 			Summonpos(p, pos, "chicken", fmt.Sprintf("%s:service:%s", app.Name.String(), app.Name.String()))
 		}
