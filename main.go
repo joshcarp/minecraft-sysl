@@ -46,7 +46,7 @@ func main() {
 		fmt.Println("Here2")
 		//DoSysl(player, module)
 		player.Position(func(position mctype.Position) {
-			Fill(player, position, -10, 0, 20, 20, 15, 20, "water")
+			Fill(player, position, -10, 0, 20, 20, 15, 20, "chicken")
 		})
 
 
