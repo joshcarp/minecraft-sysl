@@ -4,14 +4,12 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/anz-bank/sysl/pkg/parse"
 	"github.com/anz-bank/sysl/pkg/sysl"
 	"github.com/sandertv/mcwss"
 	"github.com/sandertv/mcwss/mctype"
-	"github.com/sandertv/mcwss/protocol/event"
 )
 
 var initpos mctype.Position
@@ -30,18 +28,19 @@ func main() {
 	})
 
 	p := parse.NewParser()
-	module, _ := p.ParseString(`App:
+	module, _ := p.ParseString(`
+App:
     _:
-        foobar:
-            return ok <: string
+		foobar:
+			return ok <: string
 App2:
     _:
         oasdoiasd:
-            reutrn ok <: string
+            return ok <: string
 App3:
     _:
         oasdoiasd:
-            reutrn ok <: string`)
+            return ok <: string`)
 	server.OnConnection(func(player *mcwss.Player) {
 		MOTD(player)
 		InitArea(player)
