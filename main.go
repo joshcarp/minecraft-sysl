@@ -68,7 +68,7 @@ func DoSysl(p *mcwss.Player, m *sysl.Module) {
 	p.Position(func(pos mctype.Position) {
 		for _, app := range m.Apps {
 			fmt.Println("Here2")
-			p.Exec(fmt.Sprintf("summon %s %s ~ ~ ~", "chicken", app.Name), nil)
+			p.Exec(fmt.Sprintf("summon %s ~ ~ ~ %s %s", "chicken", app.Name, app.Name), nil)
 		}
 	})
 }
