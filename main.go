@@ -45,7 +45,9 @@ App3:
 		MOTD(player)
 		InitArea(player)
 		fmt.Println(player)
+		fmt.Println("Here2")
 		DoSysl(player, module)
+		fmt.Println("Here3")
 	})
 	server.OnDisconnection(func(player *mcwss.Player) {
 		fmt.Println(player)
@@ -64,6 +66,7 @@ func MOTD(player *mcwss.Player) {
 func DoSysl(p *mcwss.Player, m *sysl.Module) {
 	p.Position(func(pos mctype.Position) {
 		for _, app := range m.Apps {
+			fmt.Println("Here2")
 			Fill(p, pos, -20, -2, -20, 20, 15, 20, "chicken")
 			Summonpos(p, pos, "chicken", fmt.Sprintf("%s:service:%s", app.Name.String(), app.Name.String()))
 		}
