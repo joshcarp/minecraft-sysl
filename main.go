@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/anz-bank/sysl/pkg/parse"
-	"github.com/anz-bank/sysl/pkg/sysl"
 	"github.com/sandertv/mcwss"
 	"github.com/sandertv/mcwss/mctype"
 )
