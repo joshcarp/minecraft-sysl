@@ -47,7 +47,7 @@ App3:
 		fmt.Println(player)
 		fmt.Println("Here2")
 		//DoSysl(player, module)
-		player.Exec(fmt.Sprintf("/summon chicken 667 67 7 "), nil)
+		player.Exec(fmt.Sprintf("summon chicken @steve"), nil)
 
 		fmt.Println("Here3")
 
