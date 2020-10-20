@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/anz-bank/sysl/pkg/parse"
 	"github.com/sandertv/mcwss"
 	"github.com/sandertv/mcwss/mctype"
 )
@@ -26,20 +25,20 @@ func main() {
 		Address:        "0.0.0.0:" + os.Getenv("PORT"),
 	})
 
-	p := parse.NewParser()
-	module, _ := p.ParseString(`
-App:
-    _:
-		foobar:
-			return ok <: string
-App2:
-    _:
-        oasdoiasd:
-            return ok <: string
-App3:
-    _:
-        oasdoiasd:
-            return ok <: string`)
+	//p := parse.NewParser()
+	//	module, _ := p.ParseString(`
+	//App:
+	//    _:
+	//		foobar:
+	//			return ok <: string
+	//App2:
+	//    _:
+	//        oasdoiasd:
+	//            return ok <: string
+	//App3:
+	//    _:
+	//        oasdoiasd:
+	//            return ok <: string`)
 	server.OnConnection(func(player *mcwss.Player) {
 		MOTD(player)
 		InitArea(player)
