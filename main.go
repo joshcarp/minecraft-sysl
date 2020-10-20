@@ -45,7 +45,11 @@ func main() {
 		fmt.Println(player)
 		fmt.Println("Here2")
 		//DoSysl(player, module)
-		player.Exec(fmt.Sprintf("summon chicken @steve"), nil)
+		player.Position(func(position mcwss.Position) {
+			Fill(player, position, -10, 0, 20, 20, 15, 20, "water")
+		})
+
+
 
 		fmt.Println("Here3")
 
