@@ -64,6 +64,7 @@ func MOTD(player *mcwss.Player) {
 }
 
 func DoSysl(p *mcwss.Player, m *sysl.Module) {
+	fmt.Println(m)
 	p.Position(func(pos mctype.Position) {
 		for _, app := range m.Apps {
 			fmt.Println("Here2")
