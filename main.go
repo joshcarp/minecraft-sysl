@@ -46,8 +46,11 @@ App3:
 		InitArea(player)
 		fmt.Println(player)
 		fmt.Println("Here2")
-		DoSysl(player, module)
+		//DoSysl(player, module)
+		player.Exec(fmt.Sprintf("summon chicken 667 67 7 "), nil)
+
 		fmt.Println("Here3")
+
 	})
 	server.OnDisconnection(func(player *mcwss.Player) {
 		fmt.Println(player)
@@ -63,15 +66,15 @@ func MOTD(player *mcwss.Player) {
 	player.Exec(fmt.Sprintf("title %s subtitle The best specification language in all of the world", player.Name()), nil)
 }
 
-func DoSysl(p *mcwss.Player, m *sysl.Module) {
-	fmt.Println(m)
-	p.Position(func(pos mctype.Position) {
-		for _, app := range m.Apps {
-			fmt.Println("Here2")
-			p.Exec(fmt.Sprintf("summon %s ~ ~ ~ %s %s", "chicken", app.Name, app.Name), nil)
-		}
-	})
-}
+//func DoSysl(p *mcwss.Player, m *sysl.Module) {
+//	fmt.Println(m)
+//	p.Position(func(pos mctype.Position) {
+//		for _, app := range m.Apps {
+//			fmt.Println("Here2")
+//
+//		}
+//	})
+//}
 
 func InitArea(p *mcwss.Player) {
 	p.Position(func(pos mctype.Position) {
